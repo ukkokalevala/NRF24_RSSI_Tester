@@ -1,0 +1,38 @@
+#include <SPI.h>
+#include <RF24.h>
+
+RF24 radio(D2, D8);  // CE, CSN
+
+const byte address[6] = "00001";  // This transmitter's address
+const byte remoteAddress[6] = "00002"; // Receiver's address
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial) {}
+
+  if (!radio.begin()) {
+    Serial.println("NRF24L01 not detected!");
+    while (1);
+  }
+
+  radio.setChannel(108);
+  radio.openWritingPipe(remoteAddress);
+  radio.setPALevel(RF24_PA_MAX);  // Transmit at max power for testing
+
+  Serial.println("Transmitter Ready!");
+}
+
+void loop() {
+  const char outgoingMessage[] = "Ping";
+
+  radio.stopListening();  // Switch to transmit mode
+  bool success = radio.write(&outgoingMessage, sizeof(outgoingMessage));
+
+  if (success) {
+    Serial.println("Message sent!");
+  } else {
+    Serial.println("Message failed to send.");
+  }
+
+  delay(100);  // Send message every 100 ms
+}
