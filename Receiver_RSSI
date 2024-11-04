@@ -1,0 +1,51 @@
+#include <SPI.h>
+#include <RF24.h>
+
+RF24 radio(D2, D8);  // CE, CSN
+
+const byte address[6] = "00002";  // This receiver's address
+const byte remoteAddress[6] = "00001"; // Transmitter's address
+
+int receivedCount = 0;
+unsigned long startTime;
+const int measurementInterval = 5000;  // 5 seconds for each test period
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial) {}
+
+  if (!radio.begin()) {
+    Serial.println("NRF24L01 not detected!");
+    while (1);
+  }
+
+  radio.setChannel(108);
+  radio.openReadingPipe(1, address);
+  radio.startListening();
+
+  Serial.println("Receiver Ready!");
+  startTime = millis();
+}
+
+void loop() {
+  // Check if we received a packet
+  if (radio.available()) {
+    char incomingMessage[32] = {0};
+    radio.read(&incomingMessage, sizeof(incomingMessage));
+    receivedCount++;
+  }
+
+  // Calculate "RSSI" every measurement interval
+  if (millis() - startTime >= measurementInterval) {
+    // Calculate a rough dBm approximation based on the received message count
+    int approximateRSSI = map(receivedCount, 0, 50, -100, 0);  // Adjust 50 if needed for sensitivity
+
+    Serial.print("Approximate RSSI: ");
+    Serial.print(approximateRSSI);
+    Serial.println(" dBm");
+
+    // Reset count and timer for next interval
+    receivedCount = 0;
+    startTime = millis();
+  }
+}
